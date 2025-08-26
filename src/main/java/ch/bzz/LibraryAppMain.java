@@ -33,7 +33,7 @@ public class LibraryAppMain {
 
             } else if (command.equals("listBooks")) {
                 System.out.println("Bücherliste: ");
-                booksList.forEach(System.out::println);
+                booksList.forEach(System.out::println);booksList.forEach(System.out::println);
 
             } else {
                 System.out.println("Unbekannter Befehl: " + command);
