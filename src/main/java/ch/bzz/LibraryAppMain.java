@@ -24,14 +24,17 @@ public class LibraryAppMain {
             if (command.equals("quit")) {
                 running = false;
                 System.out.println("Programm wird beendet.");
+
             } else if (command.equals("help")) {
                 System.out.println("Befehle: ");
                 System.out.println("quit - Programm beenden");
                 System.out.println("help - Hilfe anzeigen");
                 System.out.println("listBooks - Bücherliste anzeigen");
+
             } else if (command.equals("listBooks")) {
                 System.out.println("Bücherliste: ");
-                booksList.forEach(System.out::println);booksList.forEach(System.out::println);
+                booksList.forEach(System.out::println);
+
             } else {
                 System.out.println("Unbekannter Befehl: " + command);
             }
