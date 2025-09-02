@@ -11,10 +11,6 @@ import java.io.FileReader;
 import java.util.ArrayList;
 
 public class LibraryAppMain {
-    //private static final List<Books> booksList = List.of(
-            //new Books(1, "978-3-8362-9544-4", "Java ist auch eine Insel", "Christian Ullenboom", 2023),
-            //new Books(2, "978-3-658-43573-8", "Grundkurs Java", "Dietmar Abts", 2024)
-    //);
 
     public static void main(String[] args) throws SQLException {
 
@@ -34,9 +30,6 @@ public class LibraryAppMain {
         System.out.println("DB_URL: " + dbUrl);
         System.out.println("DB_USER: " + dbUser);
 
-
-
-        System.out.println("HelloWorld");
         Scanner scanner = new Scanner(System.in);
         String command = "";
         boolean running = true;
@@ -54,22 +47,28 @@ public class LibraryAppMain {
                 System.out.println("quit - Programm beenden");
                 System.out.println("help - Hilfe anzeigen");
                 System.out.println("listBooks - Bücherliste anzeigen");
+                System.out.println("importBooks <FILE_PATH> - Bücher aus einer Datei importieren");
 
             } else if (command.equals("listBooks")) {
                 printDBbooks(dbUrl, dbUser, dbPassword);
+
+            } else if (command.startsWith("importBooks")) {
+                String[] parts = command.split(" ");
+                if (parts.length == 2) {
+                    importBooks(parts[1], dbUrl, dbUser, dbPassword);
+                } else {
+                    System.out.println("Usage: importBooks <FILE_PATH>");
+                }
 
             } else {
                 System.out.println("Unbekannter Befehl: " + command);
             }
         }
         scanner.close();
-
-
     }
 
     private static void printDBbooks(String dbUrl, String dbUser, String dbPassword) {
-        try (Connection con = DriverManager
-                .getConnection(dbUrl, dbUser, dbPassword);) {
+        try (Connection con = DriverManager.getConnection(dbUrl, dbUser, dbPassword)) {
             try (Statement stmt = con.createStatement()) {
                 try (ResultSet resultSet = stmt.executeQuery("SELECT * FROM books")) {
                     ResultSetMetaData metadata = resultSet.getMetaData();
@@ -93,9 +92,86 @@ public class LibraryAppMain {
         } catch (SQLException e) {
             System.out.println("Error: " + e.getMessage());
             e.printStackTrace();
-            return;
+        }
+    }
+
+    private static void importBooks(String filePath, String dbUrl, String dbUser, String dbPassword) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(filePath));
+             Connection connection = DriverManager.getConnection(dbUrl, dbUser, dbPassword)) {
+
+            String line;
+            List<Book> books = new ArrayList<>();
+
+            while ((line = reader.readLine()) != null) {
+                String[] fields = line.split("\t");
+                if (fields.length != 5) {
+                    System.out.println("Invalid line format: " + line);
+                    continue;
+                }
+
+                int id = Integer.parseInt(fields[0]);
+                String isbn = fields[1];
+                String title = fields[2];
+                String author = fields[3];
+                int year = Integer.parseInt(fields[4]);
+
+                books.add(new Book(id, isbn, title, author, year));
+            }
+
+            for (Book book : books) {
+                String sql = "INSERT INTO books (id, isbn, title, author, year) VALUES (?, ?, ?, ?, ?) " +
+                        "ON CONFLICT (id) DO UPDATE SET isbn = EXCLUDED.isbn, title = EXCLUDED.title, " +
+                        "author = EXCLUDED.author, year = EXCLUDED.year";
+                try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+                    pstmt.setInt(1, book.getId());
+                    pstmt.setString(2, book.getIsbn());
+                    pstmt.setString(3, book.getTitle());
+                    pstmt.setString(4, book.getAuthor());
+                    pstmt.setInt(5, book.getYear());
+                    pstmt.executeUpdate();
+                }
+            }
+
+            System.out.println("Books imported successfully.");
+        } catch (Exception e) {
+            System.out.println("Error importing books: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }
 
+class Book {
+    private int id;
+    private String isbn;
+    private String title;
+    private String author;
+    private int year;
 
+    public Book(int id, String isbn, String title, String author, int year) {
+        this.id = id;
+        this.isbn = isbn;
+        this.title = title;
+        this.author = author;
+        this.year = year;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public String getIsbn() {
+        return isbn;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getAuthor() {
+        return author;
+    }
+
+    public int getYear() {
+        return year;
+    }
+}
