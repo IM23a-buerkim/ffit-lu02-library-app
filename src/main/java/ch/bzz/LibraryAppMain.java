@@ -3,39 +3,38 @@ package ch.bzz;
 import java.sql.*;
 import java.util.Scanner;
 import java.util.List;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.Properties;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.util.ArrayList;
 
 public class LibraryAppMain {
-    private static final List<Books> booksList = List.of(
-            new Books(1, "978-3-8362-9544-4", "Java ist auch eine Insel", "Christian Ullenboom", 2023),
-            new Books(2, "978-3-658-43573-8", "Grundkurs Java", "Dietmar Abts", 2024)
-    );
+    //private static final List<Books> booksList = List.of(
+            //new Books(1, "978-3-8362-9544-4", "Java ist auch eine Insel", "Christian Ullenboom", 2023),
+            //new Books(2, "978-3-658-43573-8", "Grundkurs Java", "Dietmar Abts", 2024)
+    //);
 
     public static void main(String[] args) throws SQLException {
 
-        try (Connection con = DriverManager
-                .getConnection("jdbc:postgresql://localhost/localdb", "localuser", "");) {
-            try (Statement stmt = con.createStatement()) {
-                try (ResultSet resultSet = stmt.executeQuery("SELECT * FROM books")) {
-                    ResultSetMetaData metadata = resultSet.getMetaData();
-                    int columnCount = metadata.getColumnCount();
-
-                    for (int i = 1; i <= columnCount; i++) {
-                        System.out.print(metadata.getColumnName(i) + "\t");
-                    }
-                    System.out.println();
-
-                    while (resultSet.next()) {
-                        for (int i = 1; i <= columnCount; i++) {
-                            System.out.print(resultSet.getString(i) + "\t");
-                        }
-                        System.out.println();
-                    }
-                }
-            }
-        } catch (Error e) {
-            System.out.println("Error: " + e.getMessage());
+        Properties properties = new Properties();
+        try (FileInputStream fis = new FileInputStream("config.properties")) {
+            properties.load(fis);
+        } catch (IOException e) {
+            System.out.println("Error loading configuration file: " + e.getMessage());
             return;
         }
+
+        String dbUrl = properties.getProperty("DB_URL");
+        String dbUser = properties.getProperty("DB_USER");
+        String dbPassword = properties.getProperty("DB_PASSWORD");
+
+        System.out.println("Configuration loaded successfully.");
+        System.out.println("DB_URL: " + dbUrl);
+        System.out.println("DB_USER: " + dbUser);
+
+
 
         System.out.println("HelloWorld");
         Scanner scanner = new Scanner(System.in);
@@ -57,8 +56,7 @@ public class LibraryAppMain {
                 System.out.println("listBooks - Bücherliste anzeigen");
 
             } else if (command.equals("listBooks")) {
-                System.out.println("Bücherliste: ");
-                booksList.forEach(System.out::println);booksList.forEach(System.out::println);
+                printDBbooks(dbUrl, dbUser, dbPassword);
 
             } else {
                 System.out.println("Unbekannter Befehl: " + command);
@@ -67,6 +65,36 @@ public class LibraryAppMain {
         scanner.close();
 
 
+    }
+
+    private static void printDBbooks(String dbUrl, String dbUser, String dbPassword) {
+        try (Connection con = DriverManager
+                .getConnection(dbUrl, dbUser, dbPassword);) {
+            try (Statement stmt = con.createStatement()) {
+                try (ResultSet resultSet = stmt.executeQuery("SELECT * FROM books")) {
+                    ResultSetMetaData metadata = resultSet.getMetaData();
+                    int columnCount = metadata.getColumnCount();
+
+                    System.out.println("Bücher in Datenbank: ");
+
+                    for (int i = 1; i <= columnCount; i++) {
+                        System.out.print(metadata.getColumnName(i) + "\t");
+                    }
+                    System.out.println();
+
+                    while (resultSet.next()) {
+                        for (int i = 1; i <= columnCount; i++) {
+                            System.out.print(resultSet.getString(i) + "\t");
+                        }
+                        System.out.println();
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("Error: " + e.getMessage());
+            e.printStackTrace();
+            return;
+        }
     }
 }
 
