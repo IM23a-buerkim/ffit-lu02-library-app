@@ -1,7 +1,7 @@
 package ch.bzz;
 
+import java.sql.*;
 import java.util.Scanner;
-import java.util.ArrayList;
 import java.util.List;
 
 public class LibraryAppMain {
@@ -10,7 +10,32 @@ public class LibraryAppMain {
             new Books(2, "978-3-658-43573-8", "Grundkurs Java", "Dietmar Abts", 2024)
     );
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws SQLException {
+
+        try (Connection con = DriverManager
+                .getConnection("jdbc:postgresql://localhost/localdb", "localuser", "");) {
+            try (Statement stmt = con.createStatement()) {
+                try (ResultSet resultSet = stmt.executeQuery("SELECT * FROM books")) {
+                    ResultSetMetaData metadata = resultSet.getMetaData();
+                    int columnCount = metadata.getColumnCount();
+
+                    for (int i = 1; i <= columnCount; i++) {
+                        System.out.print(metadata.getColumnName(i) + "\t");
+                    }
+                    System.out.println();
+
+                    while (resultSet.next()) {
+                        for (int i = 1; i <= columnCount; i++) {
+                            System.out.print(resultSet.getString(i) + "\t");
+                        }
+                        System.out.println();
+                    }
+                }
+            }
+        } catch (Error e) {
+            System.out.println("Error: " + e.getMessage());
+            return;
+        }
 
         System.out.println("HelloWorld");
         Scanner scanner = new Scanner(System.in);

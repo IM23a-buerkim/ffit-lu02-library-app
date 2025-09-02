@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.sql.SQLException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -21,7 +22,7 @@ class LibraryAppMainTest {
     }
 
     @Test
-    void testInvalidCommandContainsInput() {
+    void testInvalidCommandContainsInput() throws SQLException {
         // Arrange
         var outStream = prepareStreams("foobar\nquit\n");
 
@@ -35,7 +36,7 @@ class LibraryAppMainTest {
     }
 
     @Test
-    void testHelpCommandContainsHelpAndQuit() {
+    void testHelpCommandContainsHelpAndQuit() throws SQLException {
         // Arrange
         var outStream = prepareStreams("help\nquit\n");
 
@@ -49,7 +50,7 @@ class LibraryAppMainTest {
     }
 
     @Test
-    void testListBooksPrintsExampleBooks() {
+    void testListBooksPrintsExampleBooks() throws SQLException {
         // Arrange
         var out = prepareStreams("listBooks\nquit\n");
 
