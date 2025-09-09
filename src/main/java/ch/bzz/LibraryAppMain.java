@@ -101,7 +101,9 @@ public class LibraryAppMain {
 
             String line;
             List<Book> books = new ArrayList<>();
-
+            if ((line = reader.readLine()) != null) {
+                System.out.println("Skipping header line");
+            }
             while ((line = reader.readLine()) != null) {
                 String[] fields = line.split("\t");
                 if (fields.length != 5) {
@@ -119,9 +121,9 @@ public class LibraryAppMain {
             }
 
             for (Book book : books) {
-                String sql = "INSERT INTO books (id, isbn, title, author, year) VALUES (?, ?, ?, ?, ?) " +
+                String sql = "INSERT INTO books (id, isbn, title, author, publication_year) VALUES (?, ?, ?, ?, ?) " +
                         "ON CONFLICT (id) DO UPDATE SET isbn = EXCLUDED.isbn, title = EXCLUDED.title, " +
-                        "author = EXCLUDED.author, year = EXCLUDED.year";
+                        "author = EXCLUDED.author, publication_year = EXCLUDED.publication_year";
                 try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
                     pstmt.setInt(1, book.getId());
                     pstmt.setString(2, book.getIsbn());
@@ -137,41 +139,5 @@ public class LibraryAppMain {
             System.out.println("Error importing books: " + e.getMessage());
             e.printStackTrace();
         }
-    }
-}
-
-class Book {
-    private int id;
-    private String isbn;
-    private String title;
-    private String author;
-    private int year;
-
-    public Book(int id, String isbn, String title, String author, int year) {
-        this.id = id;
-        this.isbn = isbn;
-        this.title = title;
-        this.author = author;
-        this.year = year;
-    }
-
-    public int getId() {
-        return id;
-    }
-
-    public String getIsbn() {
-        return isbn;
-    }
-
-    public String getTitle() {
-        return title;
-    }
-
-    public String getAuthor() {
-        return author;
-    }
-
-    public int getYear() {
-        return year;
     }
 }
