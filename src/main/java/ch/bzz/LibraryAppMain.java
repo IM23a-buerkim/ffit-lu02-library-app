@@ -10,14 +10,19 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.util.ArrayList;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class LibraryAppMain {
+    private static final Logger log = LoggerFactory.getLogger(LibraryAppMain.class);
 
-    public static void main(String[] args) throws SQLException {
-
+    public static void main(String[] args) {
         Properties properties = new Properties();
         try (FileInputStream fis = new FileInputStream("config.properties")) {
             properties.load(fis);
+            log.info("Configuration file loaded successfully.");
         } catch (IOException e) {
+            log.error("Error loading configuration file: {}", e.getMessage(), e);
             System.out.println("Error loading configuration file: " + e.getMessage());
             return;
         }
@@ -26,31 +31,45 @@ public class LibraryAppMain {
         String dbUser = properties.getProperty("DB_USER");
         String dbPassword = properties.getProperty("DB_PASSWORD");
 
-        System.out.println("Configuration loaded successfully.");
-        System.out.println("DB_URL: " + dbUrl);
-        System.out.println("DB_USER: " + dbUser);
+        if (dbUrl == null || dbUser == null || dbPassword == null) {
+            log.error("Missing required database configuration properties.");
+            System.out.println("Configuration file is missing required properties. Please check the config.properties file.");
+            return;
+        }
 
         Scanner scanner = new Scanner(System.in);
-        String command = "";
         boolean running = true;
 
         while (running) {
             System.out.println("Geben Sie einen Befehl ein: ");
-            command = scanner.nextLine();
+            String command = scanner.nextLine();
+            log.info("User entered command: {}", command);
 
             if (command.equals("quit")) {
                 running = false;
+                log.info("Application is shutting down.");
                 System.out.println("Programm wird beendet.");
 
             } else if (command.equals("help")) {
                 System.out.println("Befehle: ");
                 System.out.println("quit - Programm beenden");
                 System.out.println("help - Hilfe anzeigen");
-                System.out.println("listBooks - Bücherliste anzeigen");
+                System.out.println("listBooks [limit] - Bücherliste anzeigen");
                 System.out.println("importBooks <FILE_PATH> - Bücher aus einer Datei importieren");
 
-            } else if (command.equals("listBooks")) {
-                printDBbooks(dbUrl, dbUser, dbPassword);
+            } else if (command.startsWith("listBooks")) {
+                String[] parts = command.split(" ");
+                if (parts.length == 2) {
+                    try {
+                        int limit = Integer.parseInt(parts[1]);
+                        printDBbooks(dbUrl, dbUser, dbPassword, limit);
+                    } catch (NumberFormatException e) {
+                        log.warn("Invalid limit provided for listBooks: {}", parts[1]);
+                        System.out.println("Invalid limit. Please provide a valid number.");
+                    }
+                } else {
+                    printDBbooks(dbUrl, dbUser, dbPassword, Integer.MAX_VALUE);
+                }
 
             } else if (command.startsWith("importBooks")) {
                 String[] parts = command.split(" ");
@@ -61,37 +80,41 @@ public class LibraryAppMain {
                 }
 
             } else {
+                log.warn("Unknown command entered: {}", command);
                 System.out.println("Unbekannter Befehl: " + command);
             }
         }
         scanner.close();
     }
 
-    private static void printDBbooks(String dbUrl, String dbUser, String dbPassword) {
-        try (Connection con = DriverManager.getConnection(dbUrl, dbUser, dbPassword)) {
-            try (Statement stmt = con.createStatement()) {
-                try (ResultSet resultSet = stmt.executeQuery("SELECT * FROM books")) {
-                    ResultSetMetaData metadata = resultSet.getMetaData();
-                    int columnCount = metadata.getColumnCount();
+    private static void printDBbooks(String dbUrl, String dbUser, String dbPassword, int limit) {
+        String query = "SELECT * FROM books LIMIT ?";
+        try (Connection con = DriverManager.getConnection(dbUrl, dbUser, dbPassword);
+             PreparedStatement pstmt = con.prepareStatement(query)) {
 
-                    System.out.println("Bücher in Datenbank: ");
+            pstmt.setInt(1, limit);
+            log.info("Executing query to fetch books with limit: {}", limit);
 
+            try (ResultSet resultSet = pstmt.executeQuery()) {
+                ResultSetMetaData metadata = resultSet.getMetaData();
+                int columnCount = metadata.getColumnCount();
+
+                System.out.println("Bücher in Datenbank: ");
+                for (int i = 1; i <= columnCount; i++) {
+                    System.out.print(metadata.getColumnName(i) + "\t");
+                }
+                System.out.println();
+
+                while (resultSet.next()) {
                     for (int i = 1; i <= columnCount; i++) {
-                        System.out.print(metadata.getColumnName(i) + "\t");
+                        System.out.print(resultSet.getString(i) + "\t");
                     }
                     System.out.println();
-
-                    while (resultSet.next()) {
-                        for (int i = 1; i <= columnCount; i++) {
-                            System.out.print(resultSet.getString(i) + "\t");
-                        }
-                        System.out.println();
-                    }
                 }
             }
         } catch (SQLException e) {
-            System.out.println("Error: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error fetching books from the database: {}", e.getMessage(), e);
+            System.out.println("Error fetching books: " + e.getMessage());
         }
     }
 
@@ -99,15 +122,16 @@ public class LibraryAppMain {
         try (BufferedReader reader = new BufferedReader(new FileReader(filePath));
              Connection connection = DriverManager.getConnection(dbUrl, dbUser, dbPassword)) {
 
+            log.info("Database connection established for importing books.");
             String line;
             List<Book> books = new ArrayList<>();
             if ((line = reader.readLine()) != null) {
-                System.out.println("Skipping header line");
+                log.info("Skipping header line in the file: {}", filePath);
             }
             while ((line = reader.readLine()) != null) {
                 String[] fields = line.split("\t");
                 if (fields.length != 5) {
-                    System.out.println("Invalid line format: " + line);
+                    log.warn("Invalid line format: {}", line);
                     continue;
                 }
 
@@ -134,10 +158,10 @@ public class LibraryAppMain {
                 }
             }
 
-            System.out.println("Books imported successfully.");
+            log.info("Books imported successfully from file: {}", filePath);
         } catch (Exception e) {
+            log.error("Error importing books from file {}: {}", filePath, e.getMessage(), e);
             System.out.println("Error importing books: " + e.getMessage());
-            e.printStackTrace();
         }
     }
 }
