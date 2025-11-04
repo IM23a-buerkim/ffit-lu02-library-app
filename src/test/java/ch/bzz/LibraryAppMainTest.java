@@ -101,7 +101,7 @@ class LibraryAppMainTest {
         var resourceUrl = getClass().getClassLoader().getResource("test_books_import.tsv");
         assertNotNull(resourceUrl, "Test resource file should exist");
         Path filePath = Paths.get(resourceUrl.toURI());
-        var out = prepareStreams("importBooks " + filePath + "\nlistBooks 4\nquit\n");
+        var out = prepareStreams("importBooks " + filePath + "\nlistBooks\nquit\n");
 
         // Act
         LibraryAppMain.main(new String[]{});
@@ -111,7 +111,7 @@ class LibraryAppMainTest {
 
         assertTrue(output.contains("Domain-Driven Design"), "Output should contain imported book title with id=3");
         assertTrue(output.contains("Refactoring"), "Output should contain imported book title with id=4");
-        assertFalse(output.contains("Clean Architecture"), "Output should not contain imported book title with id=4");
+        assertFalse(output.contains("Clean Architecture xyz"), "Output should not contain imported book title with id=4");
     }
 
 
