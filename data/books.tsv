@@ -1,4 +1,6 @@
-﻿id	isbn	title	authors	publication_year	
+﻿id	isbn	title	authors	publication_year
+3	1713221	Domain-Driven Design	P.D. Eastman	1960
+4	1713221	Refactoring	P.D. Eastman	1960
 1000	1713221	Are You My Mother?	P.D. Eastman	1960	
 1001	2310015	At Bertram's Hotel	Agatha Christie	1965	
 1002	2314576	Lord Edgware Dies	Agatha Christie	1933	
